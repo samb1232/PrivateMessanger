@@ -1,14 +1,18 @@
 package edu.messenger.Database;
 
 import java.sql.*;
+import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class DatabaseHandler {
+public final class DatabaseHandler {
     private static Connection dbConnection;
     private static Statement statement;
     private static ResultSet resultSet;
     private static final Lock lock = new ReentrantLock();
+
+    private DatabaseHandler() {
+    }
 
     public static void getDbConnection() throws ClassNotFoundException, SQLException {
         lock.lock();
@@ -24,10 +28,10 @@ public class DatabaseHandler {
         lock.lock();
         statement = dbConnection.createStatement();
         statement.execute("DROP TABLE if exists 'users'");
-        statement.execute("DROP TABLE if exists 'dialogue'");
+        statement.execute("DROP TABLE if exists 'chat'");
         statement.execute("CREATE TABLE if not exists 'users' "
                 + "('id' INTEGER PRIMARY KEY AUTOINCREMENT, 'nickname' text, 'password' text, 'location', text);");
-        statement.execute("CREATE TABLE if not exists 'dialogue' "
+        statement.execute("CREATE TABLE if not exists 'chat' "
                 + "('id' INTEGER PRIMARY KEY AUTOINCREMENT, 'user1' text, 'user2' text, 'string', text);");
         System.out.println("Базы данных созданы");
         lock.unlock();
@@ -49,15 +53,15 @@ public class DatabaseHandler {
                 dialogue = resultSet.getString("string") + "\n" + text;
             }
         }
-        statement.execute("UPDATE 'dialogue' SET 'string' = '"
+        statement.execute("UPDATE 'chat' SET 'string' = '"
                 + dialogue + "' WHERE user1 = '" + user1 + "' AND user2 = '" + user2 + "';");
-        System.out.println("Добавлен новый диалог");
+        System.out.println("Диалог был изменен");
         lock.unlock();
     }
 
     public static boolean signUpDialogue(String user1, String user2, String text) throws SQLException {
         lock.lock();
-        resultSet = statement.executeQuery("SELECT * FROM 'dialogue'");
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
         if (user1.hashCode() > user2.hashCode()) {
             String temp = user1;
             user1 = user2;
@@ -70,7 +74,7 @@ public class DatabaseHandler {
                 return false;
             }
         }
-        statement.execute("INSERT INTO 'dialogue' ('user1', 'user2', 'string') "
+        statement.execute("INSERT INTO 'chat' ('user1', 'user2', 'string') "
                 + "VALUES " + "('" + user1 + "', '" + user2 + "', '" + text + "'); ");
         System.out.println("Добавлен новый диалог");
         lock.unlock();
@@ -93,6 +97,21 @@ public class DatabaseHandler {
         return true;
     }
 
+    public static boolean logIn(String nickName, String password) throws SQLException {
+        lock.lock();
+        resultSet = statement.executeQuery("SELECT * FROM 'users'");
+        while (resultSet.next()) {
+            String name = resultSet.getString("nickname");
+            String pass = resultSet.getString("password");
+            if (nickName.equals(name)) {
+                if (password.equals(pass)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static void readDatabase() throws SQLException {
         resultSet = statement.executeQuery("SELECT * FROM 'users'");
         System.out.println("USERS");
@@ -107,7 +126,7 @@ public class DatabaseHandler {
             System.out.println("location = " + location);
             System.out.println();
         }
-        resultSet = statement.executeQuery("SELECT * FROM 'dialogue'");
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
         System.out.println("DIALOGUES");
         while (resultSet.next()) {
             int id = resultSet.getInt("id");
@@ -148,7 +167,7 @@ public class DatabaseHandler {
         DatabaseHandler.readDatabase();
         DatabaseHandler.changeDialogue("Test1", "Test3", "TEST");
         DatabaseHandler.readDatabase();
+        System.out.println(DatabaseHandler.logIn("Test2", "Test2"));
         DatabaseHandler.closeDatabase();
     }
-
 }

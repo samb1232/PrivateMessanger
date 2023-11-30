@@ -38,3 +38,4 @@ build/
 .DS_Store
 /.idea/
 /src/main/java/edu/messenger/Database/TEST.s3db
+/TEST.s3db
