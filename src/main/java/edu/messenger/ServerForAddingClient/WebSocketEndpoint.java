@@ -29,7 +29,7 @@ public class WebSocketEndpoint {
     @OnWebSocketClose
     public void clientClose(Session session) {
         sessionList.remove(session);
-        System.out.println("Client Disconnected" + session.getRemoteAddress().toString());
+        System.out.println("Client disconnected" + session.getRemoteAddress().toString());
     }
 
     @OnWebSocketError
