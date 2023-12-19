@@ -1,5 +1,6 @@
 package edu.messenger.ServerForAddingClient;
 
+import edu.messenger.Database.DatabaseHandler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.websocket.server.config.JettyWebSocketServletContainerInitializer;
@@ -15,6 +16,13 @@ public class WebSocketServer {
 
     private void run() throws Exception {
         Server server = new Server(8889);
+        var handler = new ServletContextHandler(server, "/");
+        server.setHandler(handler);
+        DatabaseHandler.getDbConnection("DatabaseName");
+        DatabaseHandler.createDatabase();
+
+        JettyWebSocketServletContainerInitializer.configure(handler, (servletContext, container) -> {
+            container.setIdleTimeout(Duration.ofMinutes(15));
         var handler = new ServletContextHandler(server, "/websocket");
         server.setHandler(handler);
 
