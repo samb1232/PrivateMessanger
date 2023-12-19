@@ -7,6 +7,10 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.annotations.*;
+
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -103,5 +107,9 @@ public class WebSocketEndpoint {
         } else {
             session.getRemote().sendString("Char with this user is already exist, try again!");
         }
+     
+    public void clientMessage(Session session, String message) throws IOException {
+        session.getRemote().sendString(message + "OK");
+        System.out.println("Client message" + message);
     }
 }

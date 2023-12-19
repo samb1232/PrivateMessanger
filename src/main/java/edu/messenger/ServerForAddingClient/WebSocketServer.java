@@ -23,6 +23,11 @@ public class WebSocketServer {
 
         JettyWebSocketServletContainerInitializer.configure(handler, (servletContext, container) -> {
             container.setIdleTimeout(Duration.ofMinutes(15));
+        var handler = new ServletContextHandler(server, "/websocket");
+        server.setHandler(handler);
+
+        JettyWebSocketServletContainerInitializer.configure(handler, (servletContext, container) -> {
+            container.setIdleTimeout(Duration.ofMinutes(10));
             container.addMapping("/", WebSocketEndpoint.class);
         });
         server.start();
