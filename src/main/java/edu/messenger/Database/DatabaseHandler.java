@@ -1,7 +1,10 @@
 package edu.messenger.Database;
 
 import java.sql.*;
-import java.util.UUID;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -14,9 +17,9 @@ public final class DatabaseHandler {
     private DatabaseHandler() {
     }
 
-    public static void getDbConnection() throws ClassNotFoundException, SQLException {
+    public static void getDbConnection(String databaseName) throws ClassNotFoundException, SQLException {
         lock.lock();
-        String connectionString = "jdbc:sqlite:TEST.s3db";
+        String connectionString = "jdbc:sqlite:" + databaseName + ".s3db";
         Class.forName("org.sqlite.JDBC");
         dbConnection = DriverManager.getConnection(connectionString);
         statement = dbConnection.createStatement();
@@ -37,36 +40,57 @@ public final class DatabaseHandler {
         lock.unlock();
     }
 
-    public static void changeDialogue(String user1, String user2, String text) throws SQLException {
+    public static boolean changeChat(String user1, String user2, String text) throws SQLException {
         lock.lock();
         if (user1.hashCode() > user2.hashCode()) {
             String temp = user1;
             user1 = user2;
             user2 = temp;
         }
+        boolean flag = true;
         String dialogue = "";
-        resultSet = statement.executeQuery("SELECT * FROM 'dialogue'");
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
         while (resultSet.next()) {
             String name1 = resultSet.getString("user1");
             String name2 = resultSet.getString("user2");
             if ((name1.equals(user1)) && (name2.equals(user2))) {
                 dialogue = resultSet.getString("string") + "\n" + text;
+                flag = false;
             }
+        }
+        if (flag) {
+            return false;
         }
         statement.execute("UPDATE 'chat' SET 'string' = '"
                 + dialogue + "' WHERE user1 = '" + user1 + "' AND user2 = '" + user2 + "';");
         System.out.println("Диалог был изменен");
         lock.unlock();
+        return true;
     }
 
-    public static boolean signUpDialogue(String user1, String user2, String text) throws SQLException {
+    public static boolean signUpChat(String user1, String user2, String text) throws SQLException {
         lock.lock();
-        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
+        boolean flag1 = false;
+        boolean flag2 = false;
         if (user1.hashCode() > user2.hashCode()) {
             String temp = user1;
             user1 = user2;
             user2 = temp;
         }
+        resultSet = statement.executeQuery("SELECT * FROM 'users'");
+        while (resultSet.next()) {
+            String nickname = resultSet.getString("nickname");
+            if (nickname.equals(user1)) {
+                flag1 = true;
+            }
+            if (nickname.equals(user2)) {
+                flag2 = true;
+            }
+        }
+        if (!((flag1) && (flag2))) {
+            return false;
+        }
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
         while (resultSet.next()) {
             String name1 = resultSet.getString("user1");
             String name2 = resultSet.getString("user2");
@@ -109,6 +133,7 @@ public final class DatabaseHandler {
                 }
             }
         }
+        lock.unlock();
         return false;
     }
 
@@ -142,6 +167,50 @@ public final class DatabaseHandler {
         System.out.println("Все выведено");
     }
 
+    public static List<String> getAllUsers() throws SQLException {
+        lock.lock();
+        resultSet = statement.executeQuery("SELECT * FROM 'users'");
+        List<String> users = new ArrayList<>();
+        while (resultSet.next()) {
+            users.add(resultSet.getString("nickname"));
+        }
+        lock.unlock();
+        return users;
+    }
+
+    public static Map<Integer, List<String>> getAllChats() throws SQLException {
+        lock.lock();
+        Map<Integer, List<String>> map = new HashMap<>();
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
+        while (resultSet.next()) {
+            int id = resultSet.getInt("id");
+            String user1 = resultSet.getString("user1");
+            String user2 = resultSet.getString("user2");
+            map.put(id, List.of(user1, user2));
+        }
+        lock.unlock();
+        return map;
+    }
+
+    public static String getTextFromChat(String user1, String user2) throws SQLException {
+        lock.lock();
+        if (user1.hashCode() > user2.hashCode()) {
+            String temp = user1;
+            user1 = user2;
+            user2 = temp;
+        }
+        resultSet = statement.executeQuery("SELECT * FROM 'chat'");
+        while (resultSet.next()) {
+            String name1 = resultSet.getString("user1");
+            String name2 = resultSet.getString("user2");
+            if ((name1.equals(user1)) && (name2.equals(user2))) {
+                return resultSet.getString("string");
+            }
+        }
+        lock.unlock();
+        return null;
+    }
+
     public static void closeDatabase() throws SQLException {
         lock.lock();
         dbConnection.close();
@@ -152,20 +221,20 @@ public final class DatabaseHandler {
     }
 
     public static void main(String[] args) throws SQLException, ClassNotFoundException {
-        DatabaseHandler.getDbConnection();
+        DatabaseHandler.getDbConnection("Name");
         DatabaseHandler.createDatabase();
         DatabaseHandler.signUpUser("Test1", "Test1", "Test1");
         DatabaseHandler.signUpUser("Test2", "Test2", "Test2");
         DatabaseHandler.signUpUser("Test3", "Test3", "Test3");
         DatabaseHandler.signUpUser("Test1", "Test1", "Test1");
-        DatabaseHandler.signUpDialogue("Test1", "Test2", "aksmdkla");
+        DatabaseHandler.signUpChat("Test1", "Test2", "aksmdkla");
         DatabaseHandler.readDatabase();
-        DatabaseHandler.signUpDialogue("Test2", "Test1", "12312k3");
+        DatabaseHandler.signUpChat("Test2", "Test1", "12312k3");
         DatabaseHandler.readDatabase();
-        DatabaseHandler.changeDialogue("Test2", "Test1", "912838190");
-        DatabaseHandler.signUpDialogue("Test3", "Test1", "as.d;la.s");
+        DatabaseHandler.changeChat("Test2", "Test1", "912838190");
+        DatabaseHandler.signUpChat("Test3", "Test1", "as.d;la.s");
         DatabaseHandler.readDatabase();
-        DatabaseHandler.changeDialogue("Test1", "Test3", "TEST");
+        DatabaseHandler.changeChat("Test1", "Test3", "TEST");
         DatabaseHandler.readDatabase();
         System.out.println(DatabaseHandler.logIn("Test2", "Test2"));
         DatabaseHandler.closeDatabase();
